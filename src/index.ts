@@ -15,38 +15,69 @@ const planningPokerState: Game = {
   name: "Planning Poker",
   state: "lobby",
   players: [],
-  votes: {},
+};
+
+const handleVote = (socketId: string, card: string) => {
+  const player = planningPokerState.players.find((p) => p.id === socketId);
+  if (player) {
+    player.vote = card;
+  }
 };
 
 io.on("connect", (socket) => {
+  const refreshState = () => {
+    io.sockets.sockets.forEach((socket) => {
+      const socketId = socket.id;
+      /**
+       * When revealing, we want to show all votes.
+       * When voting, we want to show the votes of all players except the one who is voting.
+       * If the player has not voted yet, we want to show null.
+       * If the player has voted, we want to show -1.
+       * This is to prevent players from seeing each other's votes before revealing.
+       */
+      const players = planningPokerState.players.map((p) => ({
+        ...p,
+        vote:
+          planningPokerState.state === GameStates.REVEALING
+            ? p.vote
+            : p.id === socketId
+            ? p.vote
+            : p.vote
+            ? -1
+            : null,
+      }));
+
+      socket.emit("state", {
+        ...planningPokerState,
+        players,
+      });
+    });
+  };
   // when a player connects, send the current state
-  console.log("🃏  Player connected:", socket.id);
   socket.emit("state", planningPokerState);
   // when a player joins, add them to the game
   socket.on("join", (name: string) => {
     planningPokerState.players.push({ id: socket.id, name, vote: null });
-    console.log("🃏  Player joined:", name, " with id ", socket.id);
-    io.emit("state", planningPokerState);
+    refreshState();
   });
   socket.on("vote", (card: string) => {
-    const p = planningPokerState.players.find((p) => p.id === socket.id);
-    if (p) p.vote = card;
-    io.emit("state", planningPokerState);
+    handleVote(socket.id, card);
+    refreshState();
   });
   socket.on("reveal", () => {
     planningPokerState.state = GameStates.REVEALING;
-    io.emit("state", planningPokerState);
+    refreshState();
   });
   socket.on("reset", () => {
     planningPokerState.players.forEach((p) => (p.vote = null));
     planningPokerState.state = GameStates.VOTING;
-    io.emit("state", planningPokerState);
+    refreshState();
   });
   socket.on("disconnect", () => {
     planningPokerState.players = planningPokerState.players.filter(
       (p) => p.id !== socket.id
     );
-    io.emit("state", planningPokerState);
+    refreshState();
   });
 });
 

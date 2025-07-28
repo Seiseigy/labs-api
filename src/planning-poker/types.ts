@@ -18,5 +18,4 @@ export type Game = {
   name: string;
   state: GameState;
   players: Player[];
-  votes: Record<string, string>; // Maps player ID to their vote
 };
