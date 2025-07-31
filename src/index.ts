@@ -6,8 +6,28 @@ import { Game, GameStates } from "./planning-poker/types";
 const app = express();
 const httpServer = createServer(app);
 
+// Production-ready CORS configuration
 const io = new Server(httpServer, {
-  cors: { origin: "*" },
+  cors: { 
+    origin: process.env.NODE_ENV === "production" 
+      ? ["https://your-frontend-domain.com"] // Replace with your actual frontend domain(s)
+      : "*",
+    methods: ["GET", "POST"]
+  },
+});
+
+// Health check endpoint for Render
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok", timestamp: new Date().toISOString() });
+});
+
+// Basic info endpoint
+app.get("/", (req, res) => {
+  res.json({ 
+    message: "Planning Poker API", 
+    version: "1.0.0",
+    environment: process.env.NODE_ENV || "development"
+  });
 });
 
 const planningPokerState: Game = {
@@ -81,6 +101,10 @@ io.on("connect", (socket) => {
   });
 });
 
-httpServer.listen(process.env.PORT || 3000, () =>
-  console.log("🃏  Planning-Poker server on 3000")
-);
+const PORT = process.env.PORT || 3000;
+
+httpServer.listen(PORT, () => {
+  console.log(`🃏 Planning-Poker API running on port ${PORT}`);
+  console.log(`🌍 Environment: ${process.env.NODE_ENV || "development"}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/health`);
+});
