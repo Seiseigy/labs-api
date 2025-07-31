@@ -8,12 +8,12 @@ const httpServer = createServer(app);
 
 // Production-ready CORS configuration
 const io = new Server(httpServer, {
-  cors: { 
-    origin: process.env.NODE_ENV === "production" 
-      ? ["https://your-frontend-domain.com"] // Replace with your actual frontend domain(s)
-      : "*",
-    methods: ["GET", "POST"]
-  },
+    cors: { 
+        origin: process.env.NODE_ENV === "production" 
+            ? /^https:\/\/.*\.seilabs\.org$/ 
+            : "*",
+        methods: ["GET", "POST"]
+    },
 });
 
 // Health check endpoint for Render
